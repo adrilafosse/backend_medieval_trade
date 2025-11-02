@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000
 
 const app = express();
 app.use(cors({
-    origin: 'https://concurrentpronote-production-e8c8.up.railway.app',
+    origin: 'http://localhost:4200',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
@@ -27,7 +27,7 @@ const pool = new Pool({
 app.post("/connexion", async(req, res) => {
     const { pseudo, mot_de_passe } = req.body;
     try {
-        const resultat = await pool.query("Select id_utilisateur,m.nom,u.fk_metier,u.niveau from utilisateur u join metier m on u.fk_metier =m.id_metier where pseudo = $1 and mot_de_passe=$2", [pseudo, mot_de_passe]);
+        const resultat = await pool.query("Select u.id_utilisateur,u.pseudo,u.fk_metier,u.niveau,m.nom from utilisateur u join metier m on u.fk_metier=m.id_metier where u.pseudo = $1 and u.mot_de_passe=$2", [pseudo, mot_de_passe]);
         if (resultat.rows.length > 0) {
             //si connexion reussi
             return res.status(200).json({ message: "connexion réussie", resultat: resultat.rows[0] });
@@ -65,7 +65,7 @@ app.post("/inscription", async(req, res) => {
 app.post("/fabrication_possible", async(req, res) => {
     const { fk_metier, niveau } = req.body;
     try {
-        const resultat = await pool.query("Select f.id_fabrication, r.nom, f.id_fabrication from fabrication f join Ressource r on f.fk_ressource = r.id_ressource where f.niveau <= $1 and f.fk_metier = $2", [niveau, fk_metier]);
+        const resultat = await pool.query("Select f.id_fabrication, r.nom as produit, c.quantite, r2.nom from fabrication f join Ressource r on f.fk_ressource = r.id_ressource join cout_fabrication c on f.id_fabrication = c.fk_fabrication join Ressource r2 on r2.id_ressource = c.fk_ressource where f.niveau <= $1 and f.fk_metier = $2", [niveau, fk_metier]);
         return res.status(200).json({ message: "fabrication possible récupéré avec succes", resultat: resultat.rows });
     } catch (err) {
         console.error(err)
@@ -89,7 +89,7 @@ app.post("/cout_fabrication", async(req, res) => {
 app.post("/inventaire", async(req, res) => {
     const { id_utilisateur } = req.body;
     try {
-        const resultat = await pool.query(" Select i.fk_ressource, r.nom, i.quantité, i.id_inventaire from inventaire i join ressource r on  i.fk_ressource = r.id_ressource where fk_utilisateur = $1 ", [id_utilisateur]);
+        const resultat = await pool.query(" Select i.fk_ressource, r.nom, i.quantité, i.id_inventaire from inventaire i join ressource r on  i.fk_ressource = r.id_ressource where fk_utilisateur = $1 and i.quantité != 0 ", [id_utilisateur]);
         return res.status(200).json({ message: "inventaire récupéré avec succes", resultat: resultat.rows });
     } catch (err) {
         console.error(err)
