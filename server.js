@@ -192,13 +192,25 @@ app.post("/mettre_vente", async(req, res) => {
 });
 
 //afficher le tableau des ventes
-app.get("/tableau_vente", async(req, res) => {
+app.post("/tableau_vente", async(req, res) => {
+    const { id_utilisateur, id_ressource } = req.body;
     try {
-        const resultat = await pool.query("Select v.id_vente, v.prix, v.quantite, v.fk_utilisateur, v.fk_ressource, r.nom, u.pseudo from vente v join ressource r on v.fk_ressource = r.id_ressource join utilisateur u on u.id_utilisateur= v.fk_utilisateur ");
+        const resultat = await pool.query("Select v.id_vente, v.prix, v.quantite, v.fk_utilisateur, v.fk_ressource, r.nom, u.pseudo from vente v join ressource r on v.fk_ressource = r.id_ressource join utilisateur u on u.id_utilisateur= v.fk_utilisateur where v.fk_ressource=$1 and v.fk_utilisateur!=$2", [id_ressource, id_utilisateur]);
         return res.status(200).json({ message: "tableau des vente récupéré avec succes", resultat: resultat.rows });
     } catch (err) {
         console.error(err)
         res.status(500).send("Erreur tableau de vente");
+    }
+});
+
+//recuperer le nom de toutes les ressources
+app.get("/ressource", async(req, res) => {
+    try {
+        const resultat = await pool.query("Select id_ressource, nom from ressource");
+        return res.status(200).json({ message: "ressource récupéré avec succes", resultat: resultat.rows });
+    } catch (err) {
+        console.error(err)
+        res.status(500).send("Erreur recupération ressource");
     }
 });
 
