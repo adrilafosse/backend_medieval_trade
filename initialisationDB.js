@@ -26,9 +26,10 @@ async function initDB() {
         //await pool.query(`Insert into cout_fabrication (quantite, fk_fabrication, fk_ressource) values(1 , 3, 1), (3, 3, 4), (1, 6, 4), (3, 6, 5), (1,10, 3), (3,10,2), (1,7,1), (1,7,2), (2,2,9), (1,2,3), (2,2,4), (2,5,8), (1,5,1),(1,5,2),(2,8,1),(1,8,10),(1,1,11),(1,1,13),(2,4,15),(1,4,14),(2,9,5),(2,9,6),(1,9,7);`);
         //await pool.query(`CREATE TABLE IF NOT EXISTS Vente (id_vente SERIAL PRIMARY KEY, prix float, quantite int, statut boolean, fk_utilisateur int, fk_inventaire int, foreign key(fk_utilisateur) references utilisateur(id_utilisateur), foreign key (fk_inventaire) references inventaire(id_inventaire));`);
         //await pool.query(`Drop table Ressource, Fabrication`);
-        //await pool.query(`DELETE FROM utilisateur`);
+        //await pool.query(`DELETE FROM inventaire`);
+        //await pool.query(`DELETE FROM Utilisateur`);
         //await pool.query(`Insert into Ressource (nom) values('kamas')`);
-        //await pool.query(`update inventaire set quantité = 250 where fk_utilisateur = 3 and id_inventaire = 54`);
+        await pool.query(`update inventaire set quantité = 250 where fk_utilisateur = 9`);
         //await pool.query(`alter table vente add column fk_ressource int`);
 
         console.log('✅ Base de données initialisée avec succès !');
@@ -39,7 +40,7 @@ async function initDB() {
     }
 }
 
-//initDB();
+initDB();
 
 async function testDb() {
     try {
@@ -51,4 +52,4 @@ async function testDb() {
         await pool.end();
     }
 }
-testDb()
+//testDb()

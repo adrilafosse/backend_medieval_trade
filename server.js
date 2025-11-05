@@ -63,9 +63,9 @@ app.post("/inscription", async(req, res) => {
 
 //afficher fabrication possible
 app.post("/fabrication_possible", async(req, res) => {
-    const { fk_metier, niveau } = req.body;
+    const { fk_metier, niveau, id_utilisateur } = req.body;
     try {
-        const resultat = await pool.query("Select f.id_fabrication, r.nom as produit, c.quantite, r2.nom from fabrication f join Ressource r on f.fk_ressource = r.id_ressource join cout_fabrication c on f.id_fabrication = c.fk_fabrication join Ressource r2 on r2.id_ressource = c.fk_ressource where f.niveau <= $1 and f.fk_metier = $2", [niveau, fk_metier]);
+        const resultat = await pool.query("SELECT f.id_fabrication, r.nom AS produit, c.quantite, r2.nom ,i.quantité AS quantite_possedee FROM fabrication f JOIN ressource r ON f.fk_ressource = r.id_ressource JOIN cout_fabrication c ON f.id_fabrication = c.fk_fabrication JOIN ressource r2 ON r2.id_ressource = c.fk_ressource LEFT JOIN inventaire i ON i.fk_ressource = r2.id_ressource AND i.fk_utilisateur = $3 WHERE f.niveau <= $1 AND f.fk_metier = $2;", [niveau, fk_metier, id_utilisateur]);
         return res.status(200).json({ message: "fabrication possible récupéré avec succes", resultat: resultat.rows });
     } catch (err) {
         console.error(err)
@@ -99,14 +99,14 @@ app.post("/inventaire", async(req, res) => {
 
 //fabrication un produit
 app.post("/fabrication", async(req, res) => {
-    const { id_utilisateur, id_fabrication } = req.body;
+    const { id_utilisateur, id_fabrication, quantite } = req.body;
     try {
         //Recuperation des ressources necessaires et de l'inventaire
         const resultat = await pool.query("Select c.fk_fabrication,f.fk_ressource as ressource_a_produire, r2.nom as produit, c.quantite as quantite_requis, r.nom ,i.id_inventaire, i.quantité as quantite_possede, i.fk_ressource from cout_fabrication c join ressource r on c.fk_ressource = r.id_ressource join inventaire i on i.fk_ressource = r.id_ressource join fabrication f on f.id_fabrication = c.fk_fabrication join ressource r2 on f.fk_ressource= r2.id_ressource where i.fk_utilisateur = $1 and f.id_fabrication = $2", [id_utilisateur, id_fabrication])
         let bool = true;
         //verification qu'on possede assez de ressources
         for (let i = 0; i < resultat.rows.length; i++) {
-            if (resultat.rows[i].quantite_requis <= resultat.rows[i].quantite_possede && bool == true) {
+            if (resultat.rows[i].quantite_requis * quantite <= resultat.rows[i].quantite_possede && bool == true) {
                 bool = true;
             } else {
                 bool = false;
@@ -115,12 +115,13 @@ app.post("/fabrication", async(req, res) => {
         if (bool == true) {
             //est ce que on possede deja cette ressource ou pas 
             const resultat2 = await pool.query("Select quantité, id_inventaire from inventaire where fk_utilisateur = $1 and fk_ressource = $2", [id_utilisateur, resultat.rows[0].ressource_a_produire]);
-            await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat2.rows[0].quantité + 1, resultat2.rows[0].id_inventaire]);
+            await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat2.rows[0].quantité + quantite, resultat2.rows[0].id_inventaire]);
             for (let i = 0; i < resultat.rows.length; i++) {
                 //retier les ressources necessaire dans l'inventaire
-                await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat.rows[i].quantite_possede - resultat.rows[i].quantite_requis, resultat.rows[i].id_inventaire]);
+                await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat.rows[i].quantite_possede - resultat.rows[i].quantite_requis * quantite, resultat.rows[i].id_inventaire]);
             }
-            return res.status(201).json({ message: "ajout +1 dans l'inventaire" });
+            const resultat3 = await pool.query(" Select i.fk_ressource, r.nom, i.quantité, i.id_inventaire from inventaire i join ressource r on  i.fk_ressource = r.id_ressource where fk_utilisateur = $1 and i.quantité != 0 ", [id_utilisateur]);
+            return res.status(201).json({ message: "ajout +" + quantite + " dans l'inventaire", resultat: resultat3.rows });
         } else {
             return res.status(400).json({ message: "vous n'avez pas les ressources nécessaire" });
         }
@@ -178,13 +179,17 @@ app.get("/metiers", async(req, res) => {
 
 //mettre en vente
 app.post("/mettre_vente", async(req, res) => {
-    const { id_utilisateur, id_inventaire, quantite, prix } = req.body;
+    const { id_utilisateur, id_ressource, quantite, prix } = req.body;
     try {
-        //
-        const resultat = await pool.query("select fk_ressource, quantité from inventaire where id_inventaire = $1", [id_inventaire]);
-        await pool.query("insert into vente(fk_utilisateur,fk_ressource, prix, quantite) values ($1,$2,$3,$4)", [id_utilisateur, resultat.rows[0].fk_ressource, prix, quantite]);
-        await pool.query("update inventaire set quantité= $1 where id_inventaire = $2", [resultat.rows[0].quantité - quantite, id_inventaire]);
-        return res.status(200).json({ message: "mise en vente" });
+        const resultat = await pool.query("select fk_ressource, quantité, id_inventaire from inventaire where fk_ressource = $1 and fk_utilisateur=$2", [id_ressource, id_utilisateur]);
+        await pool.query("insert into vente(fk_utilisateur,fk_ressource, prix, quantite) values ($1,$2,$3,$4)", [id_utilisateur, id_ressource, prix, quantite]);
+        if (resultat.rows[0].quantité - quantite >= 0) {
+            await pool.query("update inventaire set quantité= $1 where id_inventaire = $2", [resultat.rows[0].quantité - quantite, resultat.rows[0].id_inventaire]);
+            const resultat2 = await pool.query(" Select i.fk_ressource, r.nom, i.quantité, i.id_inventaire from inventaire i join ressource r on  i.fk_ressource = r.id_ressource where fk_utilisateur = $1 and i.quantité != 0 ", [id_utilisateur]);
+            return res.status(200).json({ message: "mise en vente", resultat: resultat2.rows });
+        } else {
+            return res.status(400).json({ message: "Vous n'avez pas assez de cette ressource" });
+        }
     } catch (err) {
         console.error(err)
         res.status(500).send("Erreur metier");
@@ -240,8 +245,11 @@ app.post("/acheter", async(req, res) => {
                 //au met a jour la ligne avec des quantites en moins
                 await pool.query("Update vente set quantite= $1 WHERE id_vente=$2", [resultat2.rows[0].quantite - quantite, id_vente]);
             }
+            const resultat5 = await pool.query(" Select i.fk_ressource, r.nom, i.quantité, i.id_inventaire from inventaire i join ressource r on  i.fk_ressource = r.id_ressource where fk_utilisateur = $1 and i.quantité != 0 ", [id_utilisateur]);
+            const resultat6 = await pool.query("Select v.id_vente, v.prix, v.quantite, v.fk_utilisateur, v.fk_ressource, r.nom, u.pseudo from vente v join ressource r on v.fk_ressource = r.id_ressource join utilisateur u on u.id_utilisateur= v.fk_utilisateur where v.fk_ressource=$1 and v.fk_utilisateur!=$2", [resultat2.rows[0].fk_ressource, id_utilisateur]);
+            return res.status(200).json({ message: "achat effectué", resultat: resultat5.rows, resultat2: resultat6.rows });
         }
-        return res.status(200).json({ message: "achat effectué" });
+        return res.status(400).json({ message: "Vous n'avez pas assez de kamas" });
     } catch (err) {
         console.error(err)
         res.status(500).send("Erreur achat");
