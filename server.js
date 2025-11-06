@@ -309,5 +309,5 @@ app.post("/changer_metier", async(req, res) => {
     }
 });
 app.listen(port, () => {
-    console.log(`Serveur en écoute sur http://localhost:${port}`);
+    console.log(`✅ Connecté à Google Cloud SQL !`);
 });
