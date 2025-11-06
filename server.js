@@ -17,28 +17,18 @@ const pool = new Pool({
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     port: 5432,
-    ssl: { rejectUnauthorized: false }
 });
 
-// Teste la connexion à la base de données
-async function testDatabaseConnection() {
+app.get('/test-db', async(req, res) => {
     try {
-        await pool.query('SELECT NOW()'); // Requête simple pour tester la connexion
-        return { success: true, message: "Connexion à la base de données réussie !" };
-    } catch (error) {
-        console.error("Erreur de connexion à la base de données :", error);
-        return { success: false, message: "Échec de la connexion à la base de données." };
-    }
-}
-
-app.get('/', async(req, res) => {
-    const result = await testDatabaseConnection();
-    if (result.success) {
-        res.send('Backend Medieval Trade OK - Base de données connectée');
-    } else {
-        res.status(500).send('Backend Medieval Trade KO - Impossible de se connecter à la base de données');
+        const result = await pool.query('SELECT 1');
+        res.send(`DB OK: ${result.rows[0]['?column?']}`);
+    } catch (err) {
+        console.error('Erreur connexion DB:', err);
+        res.status(500).send(`Erreur DB: ${err.message}`);
     }
 });
+
 
 //connexion
 app.post("/connexion", async(req, res) => {
