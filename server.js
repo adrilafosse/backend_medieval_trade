@@ -6,6 +6,10 @@ const argon2 = require('argon2');
 
 const PORT = process.env.PORT || 8080;
 
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server is running on port ${PORT}`);
+});
+
 const app = express();
 app.use(cors({
     origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app',
