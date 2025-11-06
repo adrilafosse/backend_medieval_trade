@@ -2,13 +2,6 @@ const express = require('express');
 const cors = require("cors");
 const { Pool } = require("pg");
 require('dotenv').config();
-const argon2 = require('argon2');
-
-const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server is running on port ${PORT}`);
-});
 
 const app = express();
 app.use(cors({
@@ -20,14 +13,32 @@ app.use(express.json());
 
 const pool = new Pool({
     user: process.env.DB_USER,
-    host: process.env.DB_HOST,
+    host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
+    port: 5432,
     ssl: { rejectUnauthorized: false }
 });
 
-app.get('/', (req, res) => res.send('Backend Medieval Trade OK'));
+// Teste la connexion à la base de données
+async function testDatabaseConnection() {
+    try {
+        await pool.query('SELECT NOW()'); // Requête simple pour tester la connexion
+        return { success: true, message: "Connexion à la base de données réussie !" };
+    } catch (error) {
+        console.error("Erreur de connexion à la base de données :", error);
+        return { success: false, message: "Échec de la connexion à la base de données." };
+    }
+}
+
+app.get('/', async(req, res) => {
+    const result = await testDatabaseConnection();
+    if (result.success) {
+        res.send('Backend Medieval Trade OK - Base de données connectée');
+    } else {
+        res.status(500).send('Backend Medieval Trade KO - Impossible de se connecter à la base de données');
+    }
+});
 
 //connexion
 app.post("/connexion", async(req, res) => {
@@ -314,6 +325,7 @@ app.post("/changer_metier", async(req, res) => {
         res.status(500).send("Erreur annulation mise en vente");
     }
 });
-app.listen(port, () => {
-    console.log(`✅ Connecté à Google Cloud SQL !`);
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running on port ${PORT}`);
 });
