@@ -138,13 +138,17 @@ app.post("/augmenter_niveau", async(req, res) => {
     try {
         //verifier que l'utilisateur a assez de kamas
         const resultat = await pool.query("Select u.niveau, i.quantité, i.id_inventaire from utilisateur u join inventaire i on u.id_utilisateur = i.fk_utilisateur where i.fk_utilisateur =$1 and i.fk_ressource = 16", [id_utilisateur]);
+        //on recupere le metier
+        const resultat0 = await pool.query("Select fk_metier from utilisateur where id_utilisateur = $1", [id_utilisateur]);
         //pour passer du niveau 1 au 2
         if (resultat.rows[0].niveau == 1) {
             if (resultat.rows[0].quantité >= 250) {
                 //retirer les kamas necessaire pour le passge de niveau
                 await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat.rows[0].quantité - 250, resultat.rows[0].id_inventaire]);
                 await pool.query("update utilisateur set niveau=2 where id_utilisateur=$1", [id_utilisateur]);
-                return res.status(200).json({ message: "vous etes maintenant lvl 2" });
+                //on recupere la liste des fabrications possibles
+                const resultat2 = await pool.query("SELECT f.id_fabrication, r.nom AS produit, c.quantite, r2.nom ,i.quantité AS quantite_possedee FROM fabrication f JOIN ressource r ON f.fk_ressource = r.id_ressource JOIN cout_fabrication c ON f.id_fabrication = c.fk_fabrication JOIN ressource r2 ON r2.id_ressource = c.fk_ressource LEFT JOIN inventaire i ON i.fk_ressource = r2.id_ressource AND i.fk_utilisateur = $3 WHERE f.niveau <= $1 AND f.fk_metier = $2;", [2, resultat0.rows[0].fk_metier, id_utilisateur]);
+                return res.status(200).json({ message: "vous etes maintenant lvl 2", resultat: resultat2.rows });
             } else {
                 return res.status(400).json({ message: "pas assez de kamas" });
             }
@@ -155,7 +159,9 @@ app.post("/augmenter_niveau", async(req, res) => {
                 //retirer les kamas necessaire pour le passge de niveau
                 await pool.query("update inventaire set quantité=$1 where id_inventaire=$2", [resultat.rows[0].quantité - 500, resultat.rows[0].id_inventaire]);
                 await pool.query("update utilisateur set niveau=3 where id_utilisateur=$1", [id_utilisateur]);
-                return res.status(200).json({ message: "vous etes maintenant lvl 3" });
+                //on recupere la liste des fabrications possibles
+                const resultat2 = await pool.query("SELECT f.id_fabrication, r.nom AS produit, c.quantite, r2.nom ,i.quantité AS quantite_possedee FROM fabrication f JOIN ressource r ON f.fk_ressource = r.id_ressource JOIN cout_fabrication c ON f.id_fabrication = c.fk_fabrication JOIN ressource r2 ON r2.id_ressource = c.fk_ressource LEFT JOIN inventaire i ON i.fk_ressource = r2.id_ressource AND i.fk_utilisateur = $3 WHERE f.niveau <= $1 AND f.fk_metier = $2;", [3, resultat0.rows[0].fk_metier, id_utilisateur]);
+                return res.status(200).json({ message: "vous etes maintenant lvl 3", resultat: resultat2.rows });
             } else {
                 return res.status(400).json({ message: "pas assez de kamas" });
             }
@@ -280,6 +286,28 @@ app.post("/annuler_vente", async(req, res) => {
     }
 });
 
+//changer de metier
+app.post("/changer_metier", async(req, res) => {
+    const { id_utilisateur, id_metier } = req.body;
+    try {
+        //recuperation kamas du joueur
+        const resultat = await pool.query("select quantité as kamas_possede from inventaire where fk_utilisateur = $1 and fk_ressource = 16", [id_utilisateur]);
+        if (resultat.rows[0].kamas_possede >= 250) {
+            //changer son metier
+            await pool.query("update utilisateur set fk_metier=$1, niveau = 1 where id_utilisateur=$2", [id_metier, id_utilisateur]);
+            //lui enlever 250 kamas
+            await pool.query("update inventaire set quantité=$1 where fk_utilisateur=$2 and fk_ressource = 16", [resultat.rows[0].kamas_possede - 250, id_utilisateur]);
+            //on recupere la liste des fabrications possibles
+            const resultat2 = await pool.query("SELECT f.id_fabrication, r.nom AS produit, c.quantite, r2.nom ,i.quantité AS quantite_possedee FROM fabrication f JOIN ressource r ON f.fk_ressource = r.id_ressource JOIN cout_fabrication c ON f.id_fabrication = c.fk_fabrication JOIN ressource r2 ON r2.id_ressource = c.fk_ressource LEFT JOIN inventaire i ON i.fk_ressource = r2.id_ressource AND i.fk_utilisateur = $3 WHERE f.niveau <= $1 AND f.fk_metier = $2;", [1, id_metier, id_utilisateur]);
+            return res.status(200).json({ message: "fabrication possible récupéré avec succes", resultat: resultat2.rows });
+        } else {
+            return res.status(400).json({ message: "Vous devez posséder 250 kamas" });
+        }
+    } catch (err) {
+        console.error(err)
+        res.status(500).send("Erreur annulation mise en vente");
+    }
+});
 app.listen(port, () => {
     console.log(`Serveur en écoute sur http://localhost:${port}`);
 });

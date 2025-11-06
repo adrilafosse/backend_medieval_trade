@@ -29,7 +29,8 @@ async function initDB() {
         //await pool.query(`DELETE FROM inventaire`);
         //await pool.query(`DELETE FROM Utilisateur`);
         //await pool.query(`Insert into Ressource (nom) values('kamas')`);
-        await pool.query(`update inventaire set quantité = 250 where fk_utilisateur = 9`);
+        await pool.query(`update inventaire set quantité = 2500 where fk_utilisateur = 8 and fk_ressource = 16`);
+        //await pool.query(`update utilisateur set niveau = 1 where id_utilisateur = 8`);
         //await pool.query(`alter table vente add column fk_ressource int`);
 
         console.log('✅ Base de données initialisée avec succès !');
