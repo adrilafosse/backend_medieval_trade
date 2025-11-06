@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000
 
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:4200',
+    origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app/',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
