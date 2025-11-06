@@ -27,6 +27,8 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+app.get('/', (req, res) => res.send('Backend Medieval Trade OK'));
+
 //connexion
 app.post("/connexion", async(req, res) => {
     const { pseudo, mot_de_passe } = req.body;
