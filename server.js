@@ -5,8 +5,8 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:4200',
-    //origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app',
+    //origin: 'http://localhost:4200',
+    origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
@@ -14,12 +14,12 @@ app.use(express.json());
 
 const pool = new Pool({
     user: process.env.DB_USER,
-    //host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
-    host: process.env.DB_HOST,
+    host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
+    //host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     port: 5432,
-    ssl: { rejectUnauthorized: false }
+    //ssl: { rejectUnauthorized: false }
 });
 
 app.get('/test-db', async(req, res) => {
