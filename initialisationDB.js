@@ -42,11 +42,11 @@ async function initDB() {
     }
 }
 
-initDB();
+//initDB();
 
 async function testDb() {
     try {
-        const resultat = await pool.query(`Select * from Fabrication`);
+        const resultat = await pool.query(`Select * from vente`);
         console.log('✅ resultat =', resultat.rows);
     } catch (err) {
         console.error('❌ Erreur:', err.message);
@@ -54,4 +54,4 @@ async function testDb() {
         await pool.end();
     }
 }
-//testDb()
+testDb()
