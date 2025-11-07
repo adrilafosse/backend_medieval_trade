@@ -5,8 +5,8 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors({
-    //origin: 'http://localhost:4200',
-    origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app',
+    origin: 'http://localhost:4200',
+    //origin: 'https://frontend-medieval-trade-345909199633.europe-west1.run.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
@@ -14,12 +14,12 @@ app.use(express.json());
 
 const pool = new Pool({
     user: process.env.DB_USER,
-    host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
-    //host: process.env.DB_HOST,
+    //host: `/cloudsql/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
+    host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     port: 5432,
-    //ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false }
 });
 
 app.get('/test-db', async(req, res) => {
@@ -56,12 +56,12 @@ app.post("/inscription", async(req, res) => {
     const { pseudo, mot_de_passe, id_metier } = req.body;
     try {
         const resultat = await pool.query("Select id_utilisateur from utilisateur where pseudo = $1", [pseudo]);
-        if (resultat.rows.lenght > 0) {
+        if (resultat.rows.length > 0) {
             //si l'utilisateur existe déjà
             return res.status(400).json({ message: "l'utilisateur existe déjà" });
         } else {
             //sinon on crée un nouvel utilisateur
-            const resultatSQL = await pool.query("Insert into utilisateur(pseudo, mot_de_passe,niveau, fk_metier) values ($1, $2,$3, $4) RETURNING id_utilisateur", [pseudo, mot_de_passe, 1, id_metier]);
+            const resultatSQL = await pool.query("Insert into utilisateur(pseudo, mot_de_passe,niveau, fk_metier) values ($1, $2,$3, $4) RETURNING id_utilisateur", [pseudo, mot_de_passe, 3, id_metier]);
             await pool.query("Insert into Inventaire (quantité, fk_utilisateur, fk_ressource) values(10, $1, 1), (10, $1, 2), (10, $1, 3), (10, $1, 4), (10, $1, 5) ,(0, $1, 6),(0, $1, 7),(0, $1, 8),(0, $1, 9),(0, $1, 10),(0, $1, 11),(0, $1, 12),(0, $1, 13),(0, $1, 14),(0, $1, 15),(100,$1,16)", [resultatSQL.rows[0].id_utilisateur]);
             res.status(201).json({ message: "utilisateur crée avec succès", resultat: resultatSQL.rows[0] });
         }
